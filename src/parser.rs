@@ -1,9 +1,7 @@
 pub mod parser {
 
-    use tree_sitter::{Language, Parser, Tree};
-    use rust_code_analysis::read_file;
     use std::path::Path;
-    use rust_code_analysis::{RustParser, metrics, ParserTrait, dump_node};
+    use tree_sitter::{Language, Parser, Tree};
 
     pub struct ScopeParser {
         // code: Vec<u8>,
@@ -16,9 +14,6 @@ pub mod parser {
     //         // let parser = RustParser::new(input.clone(), &path, None);
 
     //         return parser
-
-            
-
 
     //     }
     // }
