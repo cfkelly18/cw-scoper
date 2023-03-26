@@ -2,15 +2,15 @@
 #![allow(unused_variables)]
 
 pub mod scoper {
-    use std::ffi::OsStr;
+    
     use std::fmt;
     use std::path::PathBuf;
 
     use crate::processor;
     use std::fs::File;
-    use std::io::Read;
-    use syn::parse_file;
-    use syn::{Item, ItemFn};
+    
+    
+    use syn::{Item};
 
     pub enum ScoperMode {
         verbose,

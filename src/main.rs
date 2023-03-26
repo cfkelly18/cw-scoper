@@ -1,6 +1,6 @@
 use scoper::scoper::OutputMode;
 use scoper::scoper::ScoperMode;
-use std::path::Path;
+
 use std::path::PathBuf;
 
 mod error;

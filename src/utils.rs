@@ -4,11 +4,7 @@ use walkdir::WalkDir;
 pub fn check_dir(dir: &Path) -> bool {
     // todo add a list of ignored paths
 
-    if let Some(_) = dir.to_str().unwrap().find("/target/") {
-        return true;
-    } else {
-        return false;
-    }
+    dir.to_str().unwrap().contains("/target/")
 }
 // todo cleanup
 pub fn walk_dir(p: &PathBuf) -> Vec<PathBuf> {
@@ -16,16 +12,14 @@ pub fn walk_dir(p: &PathBuf) -> Vec<PathBuf> {
     for entry in WalkDir::new(p) {
         let entry = entry.unwrap();
 
-        if let Some(_) = entry.path().extension() {
-            if entry.path().extension().unwrap() == "rs" && !check_dir(entry.path()) {
-                // println!("{:#?}", entry.path());
-                scope_files.push(entry.path().to_path_buf())
-            }
+        if entry.path().extension().is_some() && entry.path().extension().unwrap() == "rs" && !check_dir(entry.path()) {
+            // println!("{:#?}", entry.path());
+            scope_files.push(entry.path().to_path_buf())
         };
     }
 
     scope_files.sort();
-    return scope_files;
+    scope_files
 }
 
 #[cfg(test)]
