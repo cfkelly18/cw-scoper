@@ -2,12 +2,15 @@
 #![allow(unused_variables)]
 
 pub mod scoper {
-    use crate::parser;
+    use std::ffi::OsStr;
+    use std::fmt;
     use std::path::PathBuf;
 
+    use crate::processor;
     use std::fs::File;
     use std::io::Read;
     use syn::parse_file;
+    use syn::{Item, ItemFn};
 
     pub enum ScoperMode {
         verbose,
@@ -21,8 +24,26 @@ pub mod scoper {
     }
     pub struct FileSummary {
         name: String,
-        lines_of_code: u8,
-        entry_points: u8,
+        lines_of_code: u32,
+        //entry_points: u8,
+        functions: Vec<String>,
+    }
+
+    impl FileSummary {
+        pub fn new(name: &str, lines_of_code: u32, functions: Vec<String>) -> Self {
+            let name = name.to_string();
+
+            Self {
+                name,
+                lines_of_code,
+                functions,
+            }
+        }
+    }
+    impl fmt::Display for FileSummary {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "({}, {})", self.name, self.lines_of_code)
+        }
     }
 
     pub struct AuditDirSummary {
@@ -55,15 +76,28 @@ pub mod scoper {
         }
 
         pub fn process(&self) {
+            // group files by dir
+
+            // Loop the files within scope and perform processing
             for file in self.scope.clone() {
                 let file_path = file.to_str();
-                let mut code = File::open(file).expect("unable to open file"); // todo: add file checking
-                let mut content = String::new();
+                let code = File::open(file.clone()).expect("unable to open file"); // todo: add file checking
+                let reader = File::open(file.clone()).expect("unable to open file"); // todo fix this: cant clone a file
+                let content = String::new();
 
-                code.read_to_string(&mut content);
+                let file_lines: u32 = processor::get_file_lines(code);
+
                 let ast = syn::parse_file(&content).expect("unable to parse ast");
+                let mut fn_names: Vec<String> = vec![];
+                for item in ast.items {
+                    match item {
+                        Item::Fn(item) => fn_names.push(processor::process_fn_data(item)),
+                        _ => (),
+                    }
+                }
 
-                println!("{:#?} items", ast);
+                let new = FileSummary::new(file_path.unwrap(), file_lines, fn_names);
+                println!("{}", new);
             }
         }
     }
