@@ -1,6 +1,4 @@
-use syn::{
-    ItemFn,
-};
+use syn::ItemFn;
 
 use std::fs::File;
 
@@ -9,7 +7,6 @@ use std::io::{self, BufRead};
 //for now just returns function names
 //todo process attributes to detect entrypoints
 pub fn process_fn_data(function: ItemFn) -> String {
-    
     // let attribute: Vec<Attribute> = function.attrs;
     // // let entry_point = attribute.iter().map(|at: &Attribute| parse_quote!(at)).collect::<Vec<_>>();
     // for at in attribute{

@@ -2,15 +2,16 @@
 #![allow(unused_variables)]
 
 pub mod scoper {
-    
+
     use std::fmt;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     use crate::processor;
     use std::fs::File;
-    
-    
-    use syn::{Item};
+
+    use crate::utils::get_dir_type;
+    use serde::{Deserialize, Serialize};
+    use syn::Item;
 
     pub enum ScoperMode {
         verbose,
@@ -22,6 +23,7 @@ pub mod scoper {
         json,
         txt,
     }
+    #[derive(Serialize, Deserialize, Debug)]
     pub struct FileSummary {
         name: String,
         lines_of_code: u32,
@@ -42,14 +44,59 @@ pub mod scoper {
     }
     impl fmt::Display for FileSummary {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "({}, {})", self.name, self.lines_of_code)
+            write!(f, "(File:{}, Lines: [{}])", self.name, self.lines_of_code)
+        }
+    }
+
+    pub enum DirType {
+        Contract,
+        Package,
+        Test,
+        Other,
+    }
+    impl fmt::Display for DirType {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                DirType::Contract => write!(f, "Contract"),
+                DirType::Package => write!(f, "Package"),
+                DirType::Test => write!(f, "Test"),
+                DirType::Other => write!(f, "Other"),
+            }
         }
     }
 
     pub struct AuditDirSummary {
-        name: String,
+        path: PathBuf,
         files: Vec<FileSummary>,
         lines_of_code: u8,
+        dir_type: DirType,
+    }
+
+    impl AuditDirSummary {
+        pub fn new(path: PathBuf, dir_type: DirType) -> Self {
+            Self {
+                path,
+                files: vec![],
+                lines_of_code: 0,
+                dir_type,
+            }
+        }
+    }
+    impl fmt::Display for AuditDirSummary {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "(Path:{}\n, Lines: [{}]\n, Files: {}, Type: {})",
+                self.path.to_str().unwrap(),
+                self.lines_of_code,
+                self.files
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<_>>()
+                    .join(","),
+                self.dir_type
+            )
+        }
     }
 
     pub struct Summary {
@@ -76,13 +123,30 @@ pub mod scoper {
         }
 
         pub fn process(&self) {
+            let auditDirs: Vec<AuditDirSummary> = vec![];
+            let mut summary: Summary = Summary { auditDirs };
+
             // group files by dir
 
             // Loop the files within scope and perform processing
             for file in self.scope.clone() {
                 let file_path = file.to_str();
-                let code = File::open(file.clone()).expect("unable to open file"); // todo: add file checking
-                let reader = File::open(file.clone()).expect("unable to open file"); // todo fix this: cant clone a file
+                let code = File::open(file.clone()).expect("unable to open file");
+                let reader = File::open(file.clone()).expect("unable to open file");
+                let dir_type = get_dir_type(&file);
+                if summary.auditDirs.len() == 0 {
+                    let audit_dir =
+                        AuditDirSummary::new(file.parent().unwrap().to_path_buf(), dir_type);
+
+                    summary.auditDirs.push(audit_dir);
+                    // println!("Added first audit dir: {:?}", file.parent().unwrap());
+                } else if summary.auditDirs.last().unwrap().path != file.parent().unwrap() {
+                    let audit_dir =
+                        AuditDirSummary::new(file.parent().unwrap().to_path_buf(), dir_type);
+                    summary.auditDirs.push(audit_dir);
+                    // println!("Added new audit dir: {:?}", file.parent().unwrap());
+                }
+
                 let content = String::new();
 
                 let file_lines: u32 = processor::get_file_lines(code);
@@ -97,7 +161,11 @@ pub mod scoper {
                 }
 
                 let new = FileSummary::new(file_path.unwrap(), file_lines, fn_names);
-                println!("{}", new);
+                summary.auditDirs.iter_mut().last().unwrap().files.push(new);
+                // println!("{}", new);
+            }
+            for x in summary.auditDirs.iter() {
+                println!("{}\n\n", x);
             }
         }
     }
