@@ -3,8 +3,8 @@
 
 pub mod scoper {
 
-    use std::fmt;
     use std::path::{Path, PathBuf};
+    use std::{fmt, path};
 
     use crate::processor;
     use std::fs::File;
@@ -23,22 +23,24 @@ pub mod scoper {
         json,
         txt,
     }
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct FileSummary {
         name: String,
         lines_of_code: u32,
         //entry_points: u8,
         functions: Vec<String>,
+        path: PathBuf,
     }
 
     impl FileSummary {
-        pub fn new(name: &str, lines_of_code: u32, functions: Vec<String>) -> Self {
-            let name = name.to_string();
+        pub fn new(lines_of_code: u32, functions: Vec<String>, path: PathBuf) -> Self {
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
 
             Self {
                 name,
                 lines_of_code,
                 functions,
+                path,
             }
         }
     }
@@ -68,7 +70,7 @@ pub mod scoper {
     pub struct AuditDirSummary {
         path: PathBuf,
         files: Vec<FileSummary>,
-        lines_of_code: u8,
+        lines_of_code: u32,
         dir_type: DirType,
     }
 
@@ -80,6 +82,19 @@ pub mod scoper {
                 lines_of_code: 0,
                 dir_type,
             }
+        }
+        pub fn get_dir_lines(&self) -> u32 {
+            self.lines_of_code
+        }
+        pub fn increment_dir_lines(&mut self, lines: u32) {
+            self.lines_of_code += lines;
+        }
+        pub fn add_file(&mut self, file: FileSummary) {
+            if self.files.contains(&file) {
+                return;
+            }
+            self.files.push(file.clone());
+            self.increment_dir_lines(file.lines_of_code);
         }
     }
     impl fmt::Display for AuditDirSummary {
@@ -126,8 +141,6 @@ pub mod scoper {
             let auditDirs: Vec<AuditDirSummary> = vec![];
             let mut summary: Summary = Summary { auditDirs };
 
-            // group files by dir
-
             // Loop the files within scope and perform processing
             for file in self.scope.clone() {
                 let file_path = file.to_str();
@@ -143,6 +156,7 @@ pub mod scoper {
                 } else if summary.auditDirs.last().unwrap().path != file.parent().unwrap() {
                     let audit_dir =
                         AuditDirSummary::new(file.parent().unwrap().to_path_buf(), dir_type);
+
                     summary.auditDirs.push(audit_dir);
                     // println!("Added new audit dir: {:?}", file.parent().unwrap());
                 }
@@ -160,9 +174,13 @@ pub mod scoper {
                     }
                 }
 
-                let new = FileSummary::new(file_path.unwrap(), file_lines, fn_names);
-                summary.auditDirs.iter_mut().last().unwrap().files.push(new);
-                // println!("{}", new);
+                let new = FileSummary::new(file_lines, fn_names, file);
+                summary
+                    .auditDirs
+                    .iter_mut()
+                    .last()
+                    .unwrap()
+                    .add_file(new.clone());
             }
             for x in summary.auditDirs.iter() {
                 println!("{}\n\n", x);
