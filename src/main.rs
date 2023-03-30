@@ -1,13 +1,13 @@
-use scoper::scoper::{ScoperMode, Summary,OutputMode};
+use scoper::scoper::{OutputMode, ScoperMode, Summary};
 
 use std::path::PathBuf;
 
 mod error;
 mod scoper;
 use scoper::scoper::Scoper;
+mod printer;
 mod processor;
 mod utils;
-mod printer;
 
 fn main() {
     let dir = PathBuf::from("/home/colin/audit/cw-plus");
@@ -17,5 +17,4 @@ fn main() {
 
     let scoper = Scoper::new(sorted_paths, mode, output_mode);
     let summary: Summary = scoper.process();
-    
 }

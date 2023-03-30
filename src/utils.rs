@@ -1,11 +1,11 @@
 use crate::scoper::scoper::DirType;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use std::collections::HashMap;
 
+// Checks if the directory is in the ignored list
+// todo add a list of ignored paths
 pub fn check_dir(dir: &Path) -> bool {
-    // todo add a list of ignored paths
-
     dir.to_str().unwrap().contains("/target/")
 }
 /// Takes a path to a directory and returns a vector of all the .rs files in that directory and
@@ -27,18 +27,20 @@ pub fn walk_dir(p: &PathBuf) -> Vec<PathBuf> {
     scope_files.sort();
     scope_files
 }
-
+// Checks if the directory is a contract directory
 pub fn is_contract_dir(dir: &PathBuf) -> bool {
     dir.to_str().unwrap().contains("/contracts/") && !is_tests_dir(dir)
 }
-
+// Checks if the directory is a package directory
 pub fn is_packages_dir(dir: &PathBuf) -> bool {
     dir.to_str().unwrap().contains("/packages/") && !is_tests_dir(dir)
 }
+//Checks if the directory is a test directory
 pub fn is_tests_dir(dir: &PathBuf) -> bool {
     dir.to_str().unwrap().contains("/test/") || dir.to_str().unwrap().contains("/tests/")
 }
 
+// Returns the type of directory
 pub fn get_dir_type(dir: &PathBuf) -> DirType {
     if is_contract_dir(dir) {
         DirType::Contract
