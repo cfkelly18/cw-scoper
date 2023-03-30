@@ -39,7 +39,7 @@ pub mod scoper {
             Self {
                 name,
                 lines_of_code,
-                functions,
+                functions, //todo fix empty vec
                 path,
             }
         }
@@ -49,7 +49,7 @@ pub mod scoper {
             write!(f, "(File:{}, Lines: [{}])", self.name, self.lines_of_code)
         }
     }
-
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub enum DirType {
         Contract,
         Package,
@@ -66,34 +66,34 @@ pub mod scoper {
             }
         }
     }
-
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct AuditDirSummary {
-        path: PathBuf,
-        files: Vec<FileSummary>,
-        lines_of_code: u32,
-        dir_type: DirType,
+        directory_path: PathBuf,
+        directory_files: Vec<FileSummary>,
+        directory_lines_of_code: u32,
+        directory_type: DirType,
     }
 
     impl AuditDirSummary {
-        pub fn new(path: PathBuf, dir_type: DirType) -> Self {
+        pub fn new(directory_path: PathBuf, directory_type: DirType) -> Self {
             Self {
-                path,
-                files: vec![],
-                lines_of_code: 0,
-                dir_type,
+                directory_path,
+                directory_files: vec![],
+                directory_lines_of_code: 0,
+                directory_type,
             }
         }
         pub fn get_dir_lines(&self) -> u32 {
-            self.lines_of_code
+            self.directory_lines_of_code
         }
         pub fn increment_dir_lines(&mut self, lines: u32) {
-            self.lines_of_code += lines;
+            self.directory_lines_of_code += lines;
         }
         pub fn add_file(&mut self, file: FileSummary) {
-            if self.files.contains(&file) {
+            if self.directory_files.contains(&file) {
                 return;
             }
-            self.files.push(file.clone());
+            self.directory_files.push(file.clone());
             self.increment_dir_lines(file.lines_of_code);
         }
     }
@@ -102,18 +102,18 @@ pub mod scoper {
             write!(
                 f,
                 "(Path:{}\n, Lines: [{}]\n, Files: {}, Type: {})",
-                self.path.to_str().unwrap(),
-                self.lines_of_code,
-                self.files
+                self.directory_path.to_str().unwrap(),
+                self.directory_lines_of_code,
+                self.directory_files
                     .iter()
                     .map(|f| f.to_string())
                     .collect::<Vec<_>>()
                     .join(","),
-                self.dir_type
+                self.directory_type
             )
         }
     }
-
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct Summary {
         auditDirs: Vec<AuditDirSummary>,
     }
@@ -137,7 +137,7 @@ pub mod scoper {
             }
         }
 
-        pub fn process(&self) {
+        pub fn process(&self) -> Summary {
             let auditDirs: Vec<AuditDirSummary> = vec![];
             let mut summary: Summary = Summary { auditDirs };
 
@@ -153,7 +153,7 @@ pub mod scoper {
 
                     summary.auditDirs.push(audit_dir);
                     // println!("Added first audit dir: {:?}", file.parent().unwrap());
-                } else if summary.auditDirs.last().unwrap().path != file.parent().unwrap() {
+                } else if summary.auditDirs.last().unwrap().directory_path != file.parent().unwrap() {
                     let audit_dir =
                         AuditDirSummary::new(file.parent().unwrap().to_path_buf(), dir_type);
 
@@ -183,8 +183,9 @@ pub mod scoper {
                     .add_file(new.clone());
             }
             for x in summary.auditDirs.iter() {
-                println!("{}\n\n", x);
+                println!("{}\n\n", serde_json::to_string_pretty(&x).unwrap());
             }
+        return summary;
         }
     }
 }

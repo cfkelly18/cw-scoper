@@ -1,5 +1,4 @@
-use scoper::scoper::OutputMode;
-use scoper::scoper::ScoperMode;
+use scoper::scoper::{ScoperMode, Summary,OutputMode};
 
 use std::path::PathBuf;
 
@@ -8,6 +7,7 @@ mod scoper;
 use scoper::scoper::Scoper;
 mod processor;
 mod utils;
+mod printer;
 
 fn main() {
     let dir = PathBuf::from("/home/colin/audit/cw-plus");
@@ -16,5 +16,6 @@ fn main() {
     let sorted_paths = utils::walk_dir(&dir); // todo handle errors better
 
     let scoper = Scoper::new(sorted_paths, mode, output_mode);
-    scoper.process();
+    let summary: Summary = scoper.process();
+    
 }
