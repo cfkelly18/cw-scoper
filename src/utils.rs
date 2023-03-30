@@ -1,6 +1,7 @@
 use crate::scoper::scoper::DirType;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
+use std::collections::HashMap;
 
 pub fn check_dir(dir: &Path) -> bool {
     // todo add a list of ignored paths

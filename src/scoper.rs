@@ -5,6 +5,7 @@ pub mod scoper {
 
     use std::path::{Path, PathBuf};
     use std::{fmt, path};
+    use std::collections::HashMap;
 
     use crate::processor;
     use std::fs::File;
@@ -25,7 +26,7 @@ pub mod scoper {
     }
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct FileSummary {
-        name: String,
+       
         lines_of_code: u32,
         //entry_points: u8,
         functions: Vec<String>,
@@ -34,21 +35,17 @@ pub mod scoper {
 
     impl FileSummary {
         pub fn new(lines_of_code: u32, functions: Vec<String>, path: PathBuf) -> Self {
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            
 
             Self {
-                name,
+                
                 lines_of_code,
                 functions, //todo fix empty vec
                 path,
             }
         }
     }
-    impl fmt::Display for FileSummary {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "(File:{}, Lines: [{}])", self.name, self.lines_of_code)
-        }
-    }
+    
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub enum DirType {
         Contract,
@@ -69,7 +66,7 @@ pub mod scoper {
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct AuditDirSummary {
         directory_path: PathBuf,
-        directory_files: Vec<FileSummary>,
+        directory_files: HashMap<String, FileSummary>,
         directory_lines_of_code: u32,
         directory_type: DirType,
     }
@@ -78,7 +75,7 @@ pub mod scoper {
         pub fn new(directory_path: PathBuf, directory_type: DirType) -> Self {
             Self {
                 directory_path,
-                directory_files: vec![],
+                directory_files: HashMap::new(),
                 directory_lines_of_code: 0,
                 directory_type,
             }
@@ -90,29 +87,20 @@ pub mod scoper {
             self.directory_lines_of_code += lines;
         }
         pub fn add_file(&mut self, file: FileSummary) {
-            if self.directory_files.contains(&file) {
-                return;
+            let name = file.path.file_name().unwrap().to_str().unwrap().to_string();
+            match self.directory_files.get(&name) {
+                Some(_) => {
+                    return;
+                }
+                None => {
+                    self.directory_files.insert(name.clone(), file.clone());
+                    self.increment_dir_lines(file.lines_of_code);
+                }
             }
-            self.directory_files.push(file.clone());
-            self.increment_dir_lines(file.lines_of_code);
+
         }
     }
-    impl fmt::Display for AuditDirSummary {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "(Path:{}\n, Lines: [{}]\n, Files: {}, Type: {})",
-                self.directory_path.to_str().unwrap(),
-                self.directory_lines_of_code,
-                self.directory_files
-                    .iter()
-                    .map(|f| f.to_string())
-                    .collect::<Vec<_>>()
-                    .join(","),
-                self.directory_type
-            )
-        }
-    }
+    
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct Summary {
         auditDirs: Vec<AuditDirSummary>,
