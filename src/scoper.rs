@@ -13,6 +13,7 @@ pub mod scoper {
     use crate::utils::get_dir_type;
     use serde::{Deserialize, Serialize};
     use syn::Item;
+    use crate::utils::walk_dir;
 
     pub enum ScoperMode {
         verbose,
@@ -111,13 +112,21 @@ pub mod scoper {
     }
 
     impl Scoper {
-        pub fn new(scope: Vec<PathBuf>, mode: ScoperMode, output: OutputMode) -> Self {
+        // Creates a new Scoper struct and builds vector of paths to process from input directory
+        pub fn new(scope: PathBuf) -> Self {
+            let scope = walk_dir(&scope);
             Self {
                 scope,
-                mode,
-                output,
+                mode : ScoperMode::verbose, //todo remove hardcoding
+                output: OutputMode::json, //todo remove hardcoding
             }
         }
+        pub fn run(&self)  {
+            let summary = self.process();
+            let summary_json = serde_json::to_string_pretty(&summary).unwrap();
+            println!("{}", summary_json);
+        }
+
 
         pub fn process(&self) -> Summary {
             // Initialize the summary for this scope
@@ -128,7 +137,6 @@ pub mod scoper {
             for file in self.scope.clone() {
                 let file_path = file.to_str();
                 let code = File::open(file.clone()).expect("unable to open file");
-                let reader = File::open(file.clone()).expect("unable to open file");
                 let dir_type = get_dir_type(&file);
 
                 // Add the directory to the summary if it doesn't exist
@@ -170,9 +178,9 @@ pub mod scoper {
                     .add_file(new.clone());
             }
             // Debugging - remove later
-            for x in summary.audit_dirs.iter() {
-                println!("{}\n\n", serde_json::to_string_pretty(&x).unwrap());
-            }
+            // for x in summary.audit_dirs.iter() {
+            //     println!("{}\n\n", serde_json::to_string_pretty(&x).unwrap());
+            // }
             return summary;
         }
     }
