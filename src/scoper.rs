@@ -8,12 +8,12 @@ pub mod scoper {
     use std::{fmt, path};
 
     use crate::processor;
-    use std::fs::File;
+    use std::fs::{read_to_string, File};
 
     use crate::utils::get_dir_type;
+    use crate::utils::walk_dir;
     use serde::{Deserialize, Serialize};
     use syn::Item;
-    use crate::utils::walk_dir;
 
     pub enum ScoperMode {
         verbose,
@@ -30,17 +30,24 @@ pub mod scoper {
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct FileSummary {
         lines_of_code: u32,
+        lines_of_test: u32,
         //entry_points: u8,
         functions: Vec<String>,
         path: PathBuf,
     }
 
     impl FileSummary {
-        pub fn new(lines_of_code: u32, functions: Vec<String>, path: PathBuf) -> Self {
+        pub fn new(
+            lines_of_code: u32,
+            functions: Vec<String>,
+            path: PathBuf,
+            lines_of_test: u32,
+        ) -> Self {
             Self {
                 lines_of_code,
-                functions, //todo fix empty vec
+                functions,
                 path,
+                lines_of_test,
             }
         }
     }
@@ -117,16 +124,15 @@ pub mod scoper {
             let scope = walk_dir(&scope);
             Self {
                 scope,
-                mode : ScoperMode::verbose, //todo remove hardcoding
-                output: OutputMode::json, //todo remove hardcoding
+                mode: ScoperMode::verbose, //todo remove hardcoding
+                output: OutputMode::json,  //todo remove hardcoding
             }
         }
-        pub fn run(&self)  {
+        pub fn run(&self) {
             let summary = self.process();
             let summary_json = serde_json::to_string_pretty(&summary).unwrap();
-            println!("{}", summary_json);
+            println!("Summary:\n{}", summary_json);
         }
-
 
         pub fn process(&self) -> Summary {
             // Initialize the summary for this scope
@@ -154,22 +160,21 @@ pub mod scoper {
                     summary.audit_dirs.push(audit_dir);
                 }
 
-                let content = String::new();
+                let mut func_names: Vec<String> = vec![];
+
+                if let ScoperMode::verbose = self.mode {
+                    let code_str: String = read_to_string(&file).unwrap();
+                    func_names = processor::ast_parser(code_str);
+                } else {
+                    let func_names: Vec<String> = vec![]; //todo clean up
+                }
 
                 // Getting the number of lines in the file
-                let file_lines: u32 = processor::get_file_lines(code);
+                let file_lines: (u32, u32) = processor::get_file_lines(&code);
 
-                // Performing the AST parsing -- in progress
-                let ast = syn::parse_file(&content).expect("unable to parse ast");
-                let mut fn_names: Vec<String> = vec![];
-                for item in ast.items {
-                    match item {
-                        Item::Fn(item) => fn_names.push(processor::process_fn_data(item)),
-                        _ => (),
-                    }
-                }
                 // Each file gets added to its respective directory within the summary
-                let new = FileSummary::new(file_lines, fn_names, file);
+
+                let new = FileSummary::new(file_lines.0, func_names, file, file_lines.1);
                 summary
                     .audit_dirs
                     .iter_mut()
@@ -177,10 +182,7 @@ pub mod scoper {
                     .unwrap()
                     .add_file(new.clone());
             }
-            // Debugging - remove later
-            // for x in summary.audit_dirs.iter() {
-            //     println!("{}\n\n", serde_json::to_string_pretty(&x).unwrap());
-            // }
+
             return summary;
         }
     }

@@ -11,8 +11,7 @@ mod utils;
 
 fn main() {
     let dir = PathBuf::from("/home/colin/audit/cw-plus"); //todo remove hardcoding
-    
+
     let scoper = Scoper::new(dir);
     scoper.run();
-    
 }
