@@ -108,8 +108,54 @@ pub mod scoper {
     }
     // Summary is the struct that will be used to store the summary of the scope
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+    pub struct SummaryStats {
+        total_lines_of_code: u32,
+        total_lines_of_test: u32,
+        total_lines_of_code_minus_test: u32,
+    }
+
+    impl SummaryStats {
+        pub fn new() -> Self {
+            Self {
+                total_lines_of_code: 0,
+                total_lines_of_test: 0,
+                total_lines_of_code_minus_test: 0,
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct Summary {
         audit_dirs: Vec<AuditDirSummary>,
+        summary_stats: SummaryStats,
+    }
+
+    impl Summary {
+        pub fn new() -> Self {
+            Self {
+                audit_dirs: vec![],
+                summary_stats: SummaryStats::new(),
+            }
+        }
+
+        pub fn set_stats(mut self) {
+            let mut total_lines_of_code = 0;
+            let mut total_lines_of_test = 0;
+
+            for dir in self.audit_dirs.clone() {
+                total_lines_of_code += dir.get_dir_lines();
+                // for file in dir.directory_files.values() {
+                //     total_lines_of_test += file.lines_of_test;
+
+                // }
+            }
+            let stats: SummaryStats = SummaryStats {
+                total_lines_of_code,
+                total_lines_of_test,
+                total_lines_of_code_minus_test: total_lines_of_code - total_lines_of_test,
+            };
+            self.summary_stats = stats;
+        }
     }
     // Scoper is the main struct that will be used to process the scope
     pub struct Scoper {
@@ -130,14 +176,14 @@ pub mod scoper {
         }
         pub fn run(&self) {
             let summary = self.process();
+
             let summary_json = serde_json::to_string_pretty(&summary).unwrap();
-            println!("Summary:\n{}", summary_json);
+            println!("{}", summary_json);
         }
 
         pub fn process(&self) -> Summary {
             // Initialize the summary for this scope
-            let audit_dirs: Vec<AuditDirSummary> = vec![];
-            let mut summary: Summary = Summary { audit_dirs };
+            let mut summary: Summary = Summary::new();
 
             // Loop the files within scope and perform processing
             for file in self.scope.clone() {
@@ -182,6 +228,7 @@ pub mod scoper {
                     .unwrap()
                     .add_file(new.clone());
             }
+            summary.clone().set_stats();
 
             return summary;
         }
