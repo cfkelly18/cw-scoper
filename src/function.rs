@@ -1,6 +1,6 @@
 use syn::punctuated::Punctuated;
 use syn::visit::{self, Visit};
-use syn::{parse_file, File, ItemFn, Meta, Token};
+use syn::{parse_file, Arm, ExprPath, File, ItemFn, Meta, Pat, Token};
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallGraph {
     pub caller: Function,
@@ -40,13 +40,27 @@ pub struct FnVisitor {
 impl<'ast> Visit<'ast> for FnVisitor {
     fn visit_item_fn(&mut self, i: &ItemFn) {
         let new_function = Function::new(i.sig.ident.to_string(), false, false);
-        self.functions.push(new_function);
+        self.functions.push(new_function.clone());
         // visit the attributes
         for a in i.attrs.iter() {
             self.visit_attribute(a)
         }
         // visiting nested functions
-        visit::visit_item_fn(self, i);
+        if i.sig.ident.to_string() == "execute" {
+            println!("{:#?}", "FOUND Execute ENTRY POINT");
+
+            for stmt in i.block.stmts.iter() {
+                //println!("\nStatement:{:#?}", stmt);
+                if let syn::Stmt::Expr(expr, ..) = stmt {
+                    if let syn::Expr::Match(syn::ExprMatch { ref arms, .. }) = *expr {
+                        for a in arms.iter() {
+                             
+                            self.visit_arm(a);
+                        }
+                    }
+                }
+            }
+        }
     }
     fn visit_attribute(&mut self, i: &'ast syn::Attribute) {
         if i.path().is_ident("cfg_attr") {
@@ -62,13 +76,23 @@ impl<'ast> Visit<'ast> for FnVisitor {
                     }
 
                     _ => {
-                        println!("unhandled meta: {:#?}", meta);
+                        println!("unhandled meta: ");
                     }
                 }
             }
         }
     }
+        fn visit_arm(&mut self, arm: &Arm) {
+            if let Pat::TupleStruct(pat) = &arm.pat {
+                if let Some(segment) = pat.path.segments.first() {
+                    if segment.ident == "ExecuteMsg" {
+                        println!("{:#?}", "FOUND ExecuteMsg arm");
+                    }
+                }
+            }
+        }
 }
+
 // todo: actually implement the call graph
 
 fn get_call_graph(source_code: &str) {
