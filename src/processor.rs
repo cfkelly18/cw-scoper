@@ -53,7 +53,7 @@ pub fn get_file_lines(file: &File) -> (u32, u32) {
 #[cfg(test)]
 mod tests {
     use crate::utils::walk_dir;
-    use std::fs::{read_to_string, File};
+    use std::fs::read_to_string;
     use std::path::PathBuf;
 
     // Generate ast for all files in example directory
@@ -71,7 +71,7 @@ mod tests {
         }
     }
     #[test]
-    pub fn test_get_file_names() {
+    pub fn test_get_function_names() {
         let dir = PathBuf::from("example");
         let dir_vec = walk_dir(&dir);
 
